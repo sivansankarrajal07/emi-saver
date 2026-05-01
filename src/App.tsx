@@ -226,7 +226,7 @@ function SliderInput({ label, value, min, max, step, prefix, suffix, onChange, f
           {prefix && <span className="text-indigo-400 font-semibold text-sm">{prefix}</span>}
           <input
             type="number"
-            value={value}
+            value={value || ""}
             min={min}
             max={max}
             step={step}
@@ -928,7 +928,7 @@ export default function App() {
                     <label className="text-xs text-slate-400 mb-2 block">Prepayment Amount (₹)</label>
                     <input
                       type="number"
-                      value={newPrepay.amount}
+                      value={newPrepay.amount || ""}
                       min={1}
                       onChange={e => setNewPrepay(p => ({ ...p, amount: Number(e.target.value) }))}
                       className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-green-400 transition-colors text-lg"
