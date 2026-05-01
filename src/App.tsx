@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback } from "react";
-import { exportToExcel, importFromExcel } from "./utils/excelService";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
@@ -306,7 +305,6 @@ export default function App() {
   const emi = useMemo(() => calcEMI(principal, monthlyRate, tenureMonths), [principal, monthlyRate, tenureMonths]);
 
   const params: LoanParams = { principal, annualRate, tenureMonths, startMonth, startYear };
-  const [isImported, setIsImported] = useState(false);
 
   // Base amortization (no prepayments)
   const baseAmort = useMemo(() => buildAmortization(params, []), [principal, annualRate, tenureMonths, startMonth, startYear]);
@@ -362,24 +360,6 @@ export default function App() {
   })), [prepYearly]);
 
   // Handlers
-  const handleImport = async (file: File) => {
-  const data: any = await importFromExcel(file);
-
-  // Restore loan inputs
-  setPrincipal(data.inputs.principal);
-  setAnnualRate(data.inputs.annualRate);
-  setTenureYears(data.inputs.tenureYears);
-  setStartMonth(data.inputs.startMonth);
-  setStartYear(data.inputs.startYear);
-
-  // Restore prepayments if you export them later
-  if (data.inputs.prepayments) {
-    setPrepayments(data.inputs.prepayments);
-  }
-
-  setIsImported(true);
-};
-  
   const addPrepayment = useCallback(() => {
     if (newPrepay.amount <= 0) return;
     setPrepayments(prev => [...prev, { ...newPrepay, id: Math.random().toString(36) }]);
