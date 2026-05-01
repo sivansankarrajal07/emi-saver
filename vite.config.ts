@@ -10,6 +10,8 @@ const __dirname = path.dirname(__filename);
 
 // https://vite.dev/config/
 export default defineConfig({
+  // ADD THIS LINE BELOW
+  base: '/emi-saver/', 
   plugins: [react(), tailwindcss(), viteSingleFile()],
   resolve: {
     alias: {
