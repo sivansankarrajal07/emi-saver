@@ -402,7 +402,7 @@ export default function App() {
           <h1 className="text-4xl md:text-5xl font-black text-white mb-3 tracking-tight">
             Smart{" "}
             <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
-              Loan EMI
+              Home Loan EMI
             </span>{" "}
             Calculator
           </h1>
