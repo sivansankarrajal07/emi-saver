@@ -513,4 +513,836 @@ export default function App() {
                 {/* EMI Result */}
                 <div className="bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/30 rounded-xl p-4 text-center">
                   <div className="text-slate-400 text-xs mb-1">Monthly EMI</div>
-                  <div className="text-3xl font-bla
+                  <div className="text-3xl font-black text-white">₹{fmt(emi)}</div>
+                  <div className="text-indigo-300 text-xs mt-1 font-medium">
+                    {MONTHS[startMonth - 1]} {startYear} → {baseClosure ? `${baseClosure.monthName} ${baseClosure.year}` : "—"}
+                  </div>
+                </div>
+
+                {/* Quick Stats */}
+                <div className="grid grid-cols-2 gap-2 text-center">
+                  <div className="bg-white/5 rounded-xl p-3">
+                    <div className="text-xs text-slate-400 mb-1">Total Interest</div>
+                    <div className="text-sm font-bold text-rose-400">₹{fmt(baseTotalInterest)}</div>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-3">
+                    <div className="text-xs text-slate-400 mb-1">Total Payable</div>
+                    <div className="text-sm font-bold text-amber-400">₹{fmt(baseTotal)}</div>
+                  </div>
+                </div>
+
+                {/* ── Export / Import ── */}
+                <div className="flex gap-2 pt-2 border-t border-white/10">
+                  <button
+                    onClick={() =>
+                      exportToExcel(
+                        { principal, annualRate, tenureYears, startMonth, startYear },
+                        prepayments,
+                        prepAmort
+                      )
+                    }
+                    className="flex-1 flex items-center justify-center gap-2 bg-white/8 hover:bg-indigo-600/30 border border-white/10 hover:border-indigo-500/40 text-slate-300 hover:text-white py-2.5 rounded-xl text-xs font-semibold transition-all"
+                  >
+                    <Download size={14} />
+                    Export XLSX
+                  </button>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 flex items-center justify-center gap-2 bg-white/8 hover:bg-green-600/30 border border-white/10 hover:border-green-500/40 text-slate-300 hover:text-white py-2.5 rounded-xl text-xs font-semibold transition-all"
+                  >
+                    <Upload size={14} />
+                    Import XLSX
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx"
+                    className="hidden"
+                    onChange={e => {
+                      const f = e.target.files?.[0];
+                      if (f) handleImport(f);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+
+                {/* Imported success badge */}
+                {isImported && (
+                  <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/25 rounded-xl px-3 py-2">
+                    <CheckCircle size={13} className="text-green-400 shrink-0" />
+                    <span className="text-xs text-green-300 font-medium">Loan data imported successfully</span>
+                  </div>
+                )}
+
+              </div>
+            </div>
+          </div>
+
+          {/* ── Right Panel ── */}
+          <div className="xl:col-span-2 flex flex-col gap-6">
+
+            {/* Stat cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <StatCard label="Monthly EMI" value={`₹${fmt(emi)}`} color={COLORS.primary}
+                icon={<Calculator size={16} />} sub={`for ${tenureYears} yrs`} />
+              <StatCard label="Total Interest" value={`₹${fmt(prepTotalInterest)}`} color={COLORS.danger}
+                icon={<TrendingDown size={16} />}
+                sub={prepayments.length > 0 ? `Saved ₹${fmt(interestSaved)}` : `${((baseTotalInterest / principal) * 100).toFixed(0)}% of principal`} />
+              <StatCard label="Loan Closure" value={prepClosure ? `${SHORT_MONTHS[prepClosure.month - 1]} ${prepClosure.year}` : "—"} color={COLORS.success}
+                icon={<CheckCircle size={16} />}
+                sub={prepayments.length > 0 && monthsSaved > 0 ? `${monthsSaved} months early` : `${prepAmort.length} EMIs`} />
+              <StatCard label="Total Prepaid" value={prepTotalPrepayment > 0 ? `₹${fmt(prepTotalPrepayment)}` : "₹0"} color={COLORS.accent}
+                icon={<Target size={16} />}
+                sub={prepTotalPrepayment > 0 ? `${prepayments.length} prepayment(s)` : "Add prepayments →"} />
+            </div>
+
+            {/* Pie + Bar Charts */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Breakup Pie */}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                <h3 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
+                  <BarChart2 size={15} className="text-indigo-400" />
+                  Payment Breakup
+                </h3>
+                <div className="flex items-center gap-4">
+                  <ResponsiveContainer width="55%" height={160}>
+                    <PieChart>
+                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" paddingAngle={3}>
+                        {pieData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                      </Pie>
+                      <Tooltip content={<CustomTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex flex-col gap-2 flex-1">
+                    {pieData.map(d => (
+                      <div key={d.name} className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: d.color }} />
+                        <div>
+                          <div className="text-xs text-slate-400">{d.name}</div>
+                          <div className="text-sm font-bold text-white">₹{fmt(d.value)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Balance Comparison */}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                <h3 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
+                  <TrendingDown size={15} className="text-purple-400" />
+                  Outstanding Balance
+                </h3>
+                <ResponsiveContainer width="100%" height={160}>
+                  <AreaChart data={balanceChartData}>
+                    <defs>
+                      <linearGradient id="baseGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="prepGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="label" tick={{ fill: "#64748b", fontSize: 10 }} />
+                    <YAxis tick={{ fill: "#64748b", fontSize: 10 }} tickFormatter={v => `₹${Math.round(v / 100000)}L`} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="baseBalance" stroke="#6366f1" fill="url(#baseGrad)" name="Without Prepayment" strokeWidth={2} />
+                    {prepayments.length > 0 && (
+                      <Area type="monotone" dataKey="prepBalance" stroke="#10b981" fill="url(#prepGrad)" name="With Prepayment" strokeWidth={2} />
+                    )}
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Tabs ── */}
+        <div className="mb-6">
+          <div className="flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1 w-full md:w-auto md:inline-flex">
+            {(["overview", "amortization", "prepayment", "analysis"] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex-1 md:flex-none px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 capitalize
+                  ${activeTab === tab ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-slate-400 hover:text-white"}`}
+              >
+                {tab === "overview" && <span className="flex items-center gap-1.5"><BarChart2 size={14} />Overview</span>}
+                {tab === "amortization" && <span className="flex items-center gap-1.5"><BookOpen size={14} />Schedule</span>}
+                {tab === "prepayment" && <span className="flex items-center gap-1.5"><Target size={14} />Prepayment</span>}
+                {tab === "analysis" && <span className="flex items-center gap-1.5"><TrendingDown size={14} />Analysis</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Tab Content ── */}
+
+        {/* OVERVIEW TAB */}
+        {activeTab === "overview" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Yearly Payment Bar */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <h3 className="text-base font-bold mb-4 flex items-center gap-2">
+                <BarChart2 size={16} className="text-indigo-400" />
+                Yearly Principal vs Interest
+              </h3>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={yearlyBarData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                  <XAxis dataKey="year" tick={{ fill: "#64748b", fontSize: 11 }} />
+                  <YAxis tick={{ fill: "#64748b", fontSize: 11 }} tickFormatter={v => `${Math.round(v / 1000)}k`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend wrapperStyle={{ color: "#94a3b8", fontSize: 12 }} />
+                  <Bar dataKey="Principal" fill={COLORS.principal} radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="Interest" fill={COLORS.interest} radius={[3, 3, 0, 0]} />
+                  {prepayments.length > 0 && <Bar dataKey="Prepayment" fill={COLORS.prepayment} radius={[3, 3, 0, 0]} />}
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Loan Summary Card */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col gap-4">
+              <h3 className="text-base font-bold flex items-center gap-2">
+                <Info size={16} className="text-cyan-400" />
+                Loan Summary
+              </h3>
+              <div className="space-y-3">
+                {[
+                  { label: "Principal Amount", value: `₹${fmt(principal)}`, color: "text-indigo-400" },
+                  { label: "Monthly EMI", value: `₹${fmt(emi)}`, color: "text-white" },
+                  { label: "Annual Interest Rate", value: `${annualRate}%`, color: "text-white" },
+                  { label: "Loan Tenure", value: `${tenureYears} years (${tenureMonths} months)`, color: "text-white" },
+                  { label: "Loan Start", value: `${MONTHS[startMonth - 1]} ${startYear}`, color: "text-amber-400" },
+                  { label: "Expected Closure (No Prepayment)", value: baseClosure ? `${baseClosure.monthName} ${baseClosure.year}` : "—", color: "text-rose-400" },
+                  { label: "Actual Closure (With Prepayment)", value: prepClosure ? `${prepClosure.monthName} ${prepClosure.year}` : "—", color: "text-green-400" },
+                  { label: "Total Interest Payable", value: `₹${fmt(prepTotalInterest)}`, color: "text-rose-400" },
+                  { label: "Total Amount Payable", value: `₹${fmt(prepTotal)}`, color: "text-amber-400" },
+                  ...(prepayments.length > 0 ? [
+                    { label: "Interest Saved via Prepayment", value: `₹${fmt(interestSaved)}`, color: "text-green-400" },
+                    { label: "Months Saved", value: `${monthsSaved} months`, color: "text-cyan-400" },
+                  ] : []),
+                ].map(item => (
+                  <div key={item.label} className="flex justify-between items-center border-b border-white/5 pb-2">
+                    <span className="text-slate-400 text-sm">{item.label}</span>
+                    <span className={`font-bold text-sm ${item.color}`}>{item.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Closure Highlight */}
+              {prepClosure && (
+                <div className="bg-gradient-to-r from-green-600/15 to-cyan-600/15 border border-green-500/25 rounded-xl p-4 mt-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle size={16} className="text-green-400" />
+                    <span className="text-sm font-bold text-green-300">Loan Closure Date</span>
+                  </div>
+                  <div className="text-2xl font-black text-white">{prepClosure.monthName} {prepClosure.year}</div>
+                  <div className="text-xs text-slate-400 mt-1">
+                    Period {prepAmort.length} • Outstanding: ₹{fmtFull(prepClosure.closingBalance)}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* AMORTIZATION TAB */}
+        {activeTab === "amortization" && (
+          <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+            <div className="p-5 border-b border-white/10 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+              <div>
+                <h3 className="text-base font-bold flex items-center gap-2">
+                  <BookOpen size={16} className="text-indigo-400" />
+                  Amortization Schedule
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {prepAmort.length} EMIs • {MONTHS[startMonth - 1]} {startYear} → {prepClosure ? `${prepClosure.monthName} ${prepClosure.year}` : "—"}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setAmortView("yearly")}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${amortView === "yearly" ? "bg-indigo-600 text-white" : "bg-white/8 text-slate-400 hover:text-white"}`}
+                >
+                  Yearly
+                </button>
+                <button
+                  onClick={() => setAmortView("monthly")}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${amortView === "monthly" ? "bg-indigo-600 text-white" : "bg-white/8 text-slate-400 hover:text-white"}`}
+                >
+                  Monthly
+                </button>
+              </div>
+            </div>
+
+            {/* Yearly View */}
+            {amortView === "yearly" && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-white/5 border-b border-white/10">
+                      <th className="px-4 py-3 text-left text-slate-400 font-semibold">Year</th>
+                      <th className="px-4 py-3 text-left text-slate-400 font-semibold">Months</th>
+                      <th className="px-4 py-3 text-right text-slate-400 font-semibold">Principal</th>
+                      <th className="px-4 py-3 text-right text-slate-400 font-semibold">Interest</th>
+                      <th className="px-4 py-3 text-right text-slate-400 font-semibold">Prepayment</th>
+                      <th className="px-4 py-3 text-right text-slate-400 font-semibold">Total Paid</th>
+                      <th className="px-4 py-3 text-right text-slate-400 font-semibold">Balance</th>
+                      <th className="px-4 py-3 text-center text-slate-400 font-semibold">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {prepYearly.map((yr, idx) => {
+                      const isExpanded = expandedYears.has(yr.year);
+                      const monthsForYear = prepAmort.filter(r => r.year === yr.year);
+                      const isLastYear = idx === prepYearly.length - 1;
+
+                      return (
+                        <>
+                          <tr
+                            key={yr.year}
+                            onClick={() => toggleYear(yr.year)}
+                            className={`border-b border-white/5 cursor-pointer transition-colors hover:bg-white/5
+                              ${isLastYear ? "bg-green-500/10" : idx % 2 === 0 ? "bg-white/2" : ""}`}
+                          >
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${isLastYear ? "bg-green-400" : "bg-indigo-400"}`} />
+                                <span className="font-bold text-white">{yr.year}</span>
+                                {isLastYear && <span className="text-xs bg-green-500/20 text-green-300 px-1.5 py-0.5 rounded-full">Closure</span>}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-slate-400 text-xs">
+                              {(() => {
+                                const mths = monthsForYear;
+                                if (mths.length === 0) return "—";
+                                const first = mths[0];
+                                const last = mths[mths.length - 1];
+                                return `${SHORT_MONTHS[first.month - 1]} – ${SHORT_MONTHS[last.month - 1]}`;
+                              })()}
+                              <span className="text-slate-600 ml-1">({yr.months}m)</span>
+                            </td>
+                            <td className="px-4 py-3 text-right text-indigo-300 font-medium">₹{fmt(yr.principal)}</td>
+                            <td className="px-4 py-3 text-right text-rose-300 font-medium">₹{fmt(yr.interest)}</td>
+                            <td className="px-4 py-3 text-right text-green-300 font-medium">
+                              {yr.prepayment > 0 ? `₹${fmt(yr.prepayment)}` : "—"}
+                            </td>
+                            <td className="px-4 py-3 text-right text-amber-300 font-medium">₹{fmt(yr.totalPaid)}</td>
+                            <td className="px-4 py-3 text-right">
+                              <span className={yr.closingBalance < 1 ? "text-green-400 font-bold" : "text-white font-medium"}>
+                                {yr.closingBalance < 1 ? "CLOSED ✓" : `₹${fmt(yr.closingBalance)}`}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <button className="text-slate-400 hover:text-white transition-colors">
+                                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                              </button>
+                            </td>
+                          </tr>
+
+                          {/* Expanded monthly rows */}
+                          {isExpanded && monthsForYear.map(row => (
+                            <tr key={`${yr.year}-${row.month}`} className="bg-slate-800/50 border-b border-white/3 text-xs">
+                              <td className="px-4 py-2 pl-8 text-slate-500">└ {row.monthName}</td>
+                              <td className="px-4 py-2 text-slate-500">EMI #{row.period}</td>
+                              <td className="px-4 py-2 text-right text-indigo-400">₹{fmt(row.principal)}</td>
+                              <td className="px-4 py-2 text-right text-rose-400">₹{fmt(row.interest)}</td>
+                              <td className="px-4 py-2 text-right text-green-400">
+                                {row.prepayment > 0 ? `₹${fmt(row.prepayment)}` : "—"}
+                              </td>
+                              <td className="px-4 py-2 text-right text-amber-400">₹{fmt(row.totalPaid)}</td>
+                              <td className="px-4 py-2 text-right text-white">
+                                {row.closingBalance < 1 ? <span className="text-green-400 font-bold">CLOSED</span> : `₹${fmt(row.closingBalance)}`}
+                              </td>
+                              <td />
+                            </tr>
+                          ))}
+                        </>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-white/8 border-t-2 border-white/20">
+                      <td className="px-4 py-3 font-bold text-white" colSpan={2}>TOTAL</td>
+                      <td className="px-4 py-3 text-right font-bold text-indigo-300">₹{fmt(principal)}</td>
+                      <td className="px-4 py-3 text-right font-bold text-rose-300">₹{fmt(prepTotalInterest)}</td>
+                      <td className="px-4 py-3 text-right font-bold text-green-300">
+                        {prepTotalPrepayment > 0 ? `₹${fmt(prepTotalPrepayment)}` : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-amber-300">₹{fmt(prepTotal)}</td>
+                      <td className="px-4 py-3 text-right font-bold text-green-400">₹0</td>
+                      <td />
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+
+            {/* Monthly View */}
+            {amortView === "monthly" && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-white/5 border-b border-white/10">
+                      <th className="px-4 py-3 text-left text-slate-400 font-semibold">#</th>
+                      <th className="px-4 py-3 text-left text-slate-400 font-semibold">Month</th>
+                      <th className="px-4 py-3 text-left text-slate-400 font-semibold">Year</th>
+                      <th className="px-4 py-3 text-right text-slate-400 font-semibold">Opening Bal.</th>
+                      <th className="px-4 py-3 text-right text-slate-400 font-semibold">EMI</th>
+                      <th className="px-4 py-3 text-right text-slate-400 font-semibold">Principal</th>
+                      <th className="px-4 py-3 text-right text-slate-400 font-semibold">Interest</th>
+                      <th className="px-4 py-3 text-right text-slate-400 font-semibold">Prepayment</th>
+                      <th className="px-4 py-3 text-right text-slate-400 font-semibold">Closing Bal.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(showAllMonths ? prepAmort : prepAmort.slice(0, 24)).map((row, idx) => {
+                      const isNewYear = idx === 0 || prepAmort[idx - 1].year !== row.year;
+                      const isLastRow = row.closingBalance < 1;
+                      return (
+                        <>
+                          {isNewYear && (
+                            <tr key={`year-${row.year}`} className="bg-indigo-600/10 border-y border-indigo-500/20">
+                              <td colSpan={9} className="px-4 py-2 text-indigo-300 font-bold text-xs tracking-widest uppercase">
+                                ── {row.year} ──
+                              </td>
+                            </tr>
+                          )}
+                          <tr key={row.period} className={`border-b border-white/5 transition-colors hover:bg-white/5
+                            ${isLastRow ? "bg-green-500/10" : idx % 2 === 0 ? "bg-white/2" : ""}
+                            ${row.prepayment > 0 ? "ring-1 ring-inset ring-green-500/20" : ""}`}>
+                            <td className="px-4 py-2.5 text-slate-500 font-mono text-xs">{row.period}</td>
+                            <td className="px-4 py-2.5 font-medium text-white">{row.monthName}</td>
+                            <td className="px-4 py-2.5 text-slate-400">{row.year}</td>
+                            <td className="px-4 py-2.5 text-right text-slate-300">₹{fmt(row.openingBalance)}</td>
+                            <td className="px-4 py-2.5 text-right text-white font-medium">₹{fmt(row.emi)}</td>
+                            <td className="px-4 py-2.5 text-right text-indigo-300">₹{fmt(row.principal)}</td>
+                            <td className="px-4 py-2.5 text-right text-rose-300">₹{fmt(row.interest)}</td>
+                            <td className="px-4 py-2.5 text-right">
+                              {row.prepayment > 0
+                                ? <span className="text-green-300 font-bold">₹{fmt(row.prepayment)}</span>
+                                : <span className="text-slate-600">—</span>}
+                            </td>
+                            <td className="px-4 py-2.5 text-right">
+                              {isLastRow
+                                ? <span className="text-green-400 font-black text-xs">CLOSED ✓</span>
+                                : <span className="text-white font-medium">₹{fmt(row.closingBalance)}</span>}
+                            </td>
+                          </tr>
+                        </>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {prepAmort.length > 24 && (
+                  <div className="p-4 text-center border-t border-white/10">
+                    <button
+                      onClick={() => setShowAllMonths(!showAllMonths)}
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                    >
+                      {showAllMonths ? "Show Less" : `Show All ${prepAmort.length} Months`}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* PREPAYMENT TAB */}
+        {activeTab === "prepayment" && (
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            {/* Add Prepayment Panel */}
+            <div className="lg:col-span-2">
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                <h3 className="text-base font-bold mb-5 flex items-center gap-2">
+                  <PlusCircle size={16} className="text-green-400" />
+                  Add Prepayment
+                </h3>
+
+                <div className="flex flex-col gap-4">
+                  {/* Type */}
+                  <div>
+                    <label className="text-xs text-slate-400 mb-2 block">Prepayment Type</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(["oneTime", "monthly"] as const).map(t => (
+                        <button
+                          key={t}
+                          onClick={() => setNewPrepay(p => ({ ...p, type: t }))}
+                          className={`py-2.5 rounded-xl text-sm font-semibold border transition-all
+                            ${newPrepay.type === t
+                              ? "bg-green-600/30 border-green-500/50 text-green-300"
+                              : "bg-white/5 border-white/10 text-slate-400 hover:text-white"}`}
+                        >
+                          {t === "oneTime" ? "One-Time" : "Monthly (EMI+)"}
+                        </button>
+                      ))}
+                    </div>
+                    {newPrepay.type === "monthly" && (
+                      <p className="text-xs text-amber-400 mt-2 flex items-center gap-1">
+                        <AlertCircle size={11} />
+                        Extra amount added every month from the selected date
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Amount */}
+                  <div>
+                    <label className="text-xs text-slate-400 mb-2 block">Prepayment Amount (₹)</label>
+                    <input
+                      type="number"
+                      value={newPrepay.amount || ""}
+                      min={1}
+                      onChange={e => setNewPrepay(p => ({ ...p, amount: Number(e.target.value) }))}
+                      className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-green-400 transition-colors text-lg"
+                      placeholder="e.g. 100000"
+                    />
+                  </div>
+
+                  {/* Month & Year */}
+                  <div>
+                    <label className="text-xs text-slate-400 mb-2 block flex items-center gap-1">
+                      <Calendar size={11} />
+                      {newPrepay.type === "oneTime" ? "Prepayment Month & Year" : "Starting From Month & Year"}
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={newPrepay.month}
+                        onChange={e => setNewPrepay(p => ({ ...p, month: Number(e.target.value) }))}
+                        className="bg-white/10 border border-white/15 rounded-xl px-3 py-3 text-white text-sm outline-none focus:border-green-400 transition-colors"
+                      >
+                        {MONTHS.map((m, i) => (
+                          <option key={m} value={i + 1} className="bg-slate-800">{m}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={newPrepay.year}
+                        onChange={e => setNewPrepay(p => ({ ...p, year: Number(e.target.value) }))}
+                        className="bg-white/10 border border-white/15 rounded-xl px-3 py-3 text-white text-sm outline-none focus:border-green-400 transition-colors"
+                      >
+                        {yearOptions.map(y => (
+                          <option key={y} value={y} className="bg-slate-800">{y}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={addPrepayment}
+                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white py-3.5 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-green-500/20"
+                  >
+                    <PlusCircle size={16} />
+                    Add Prepayment
+                  </button>
+                </div>
+              </div>
+
+              {/* Current Prepayments List */}
+              {prepayments.length > 0 && (
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-5 mt-4">
+                  <h4 className="text-sm font-bold text-slate-300 mb-3">Scheduled Prepayments</h4>
+                  <div className="flex flex-col gap-2">
+                    {prepayments.map(p => (
+                      <div key={p.id} className="flex items-center gap-3 bg-white/5 rounded-xl p-3">
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${p.type === "monthly" ? "bg-amber-400" : "bg-green-400"}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold text-white">₹{fmt(p.amount)}</div>
+                          <div className="text-xs text-slate-400">
+                            {MONTHS[p.month - 1]} {p.year} • {p.type === "monthly" ? "Monthly (recurring)" : "One-time"}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => removePrepayment(p.id)}
+                          className="text-slate-600 hover:text-rose-400 transition-colors shrink-0"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Prepayment Impact */}
+            <div className="lg:col-span-3 flex flex-col gap-4">
+              {/* Impact Cards */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 border border-green-500/25 rounded-2xl p-5">
+                  <div className="text-xs text-green-300 mb-1 font-medium">Interest Saved</div>
+                  <div className="text-2xl font-black text-white">₹{fmt(Math.max(0, interestSaved))}</div>
+                  <div className="text-xs text-slate-400 mt-1">vs. no prepayment</div>
+                </div>
+                <div className="bg-gradient-to-br from-cyan-600/20 to-blue-600/20 border border-cyan-500/25 rounded-2xl p-5">
+                  <div className="text-xs text-cyan-300 mb-1 font-medium">Months Saved</div>
+                  <div className="text-2xl font-black text-white">{Math.max(0, monthsSaved)}</div>
+                  <div className="text-xs text-slate-400 mt-1">
+                    {monthsSaved > 0 ? `${Math.floor(monthsSaved / 12)}y ${monthsSaved % 12}m earlier` : "No change yet"}
+                  </div>
+                </div>
+                <div className="bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border border-indigo-500/25 rounded-2xl p-5">
+                  <div className="text-xs text-indigo-300 mb-1 font-medium">Closure Without Prepayment</div>
+                  <div className="text-xl font-black text-white">
+                    {baseClosure ? `${SHORT_MONTHS[baseClosure.month - 1]} ${baseClosure.year}` : "—"}
+                  </div>
+                  <div className="text-xs text-slate-400 mt-1">{baseAmort.length} EMIs</div>
+                </div>
+                <div className="bg-gradient-to-br from-amber-600/20 to-orange-600/20 border border-amber-500/25 rounded-2xl p-5">
+                  <div className="text-xs text-amber-300 mb-1 font-medium">Closure With Prepayment</div>
+                  <div className="text-xl font-black text-white">
+                    {prepClosure ? `${SHORT_MONTHS[prepClosure.month - 1]} ${prepClosure.year}` : "—"}
+                  </div>
+                  <div className="text-xs text-slate-400 mt-1">{prepAmort.length} EMIs</div>
+                </div>
+              </div>
+
+              {/* Balance Reduction Chart */}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-5 flex-1">
+                <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
+                  <TrendingDown size={15} className="text-green-400" />
+                  Balance Reduction: With vs. Without Prepayment
+                </h3>
+                <ResponsiveContainer width="100%" height={220}>
+                  <AreaChart data={balanceChartData}>
+                    <defs>
+                      <linearGradient id="baseGrad2" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="prepGrad2" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="label" tick={{ fill: "#64748b", fontSize: 11 }} />
+                    <YAxis tick={{ fill: "#64748b", fontSize: 11 }} tickFormatter={v => `₹${Math.round(v / 100000)}L`} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend wrapperStyle={{ color: "#94a3b8", fontSize: 12 }} />
+                    <Area type="monotone" dataKey="baseBalance" stroke="#f43f5e" fill="url(#baseGrad2)" name="Without Prepayment" strokeWidth={2} />
+                    <Area type="monotone" dataKey="prepBalance" stroke="#10b981" fill="url(#prepGrad2)" name="With Prepayment" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Prepayment Tips */}
+              {prepayments.length === 0 && (
+                <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl p-5">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle size={18} className="text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="text-sm font-bold text-amber-300 mb-1">Prepayment Tips</div>
+                      <ul className="text-xs text-slate-400 space-y-1">
+                        <li>• Prepaying early in the loan tenure saves the most interest</li>
+                        <li>• Even small monthly extra payments significantly reduce loan duration</li>
+                        <li>• Use annual bonus or salary hike for lump-sum prepayments</li>
+                        <li>• Check if your bank charges prepayment penalty (most don't for floating rate)</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ANALYSIS TAB */}
+        {activeTab === "analysis" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Rate Sensitivity */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <h3 className="text-base font-bold mb-4 flex items-center gap-2">
+                <TrendingDown size={16} className="text-purple-400" />
+                Rate Sensitivity Analysis
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="py-2 text-left text-slate-400 font-semibold">Rate</th>
+                      <th className="py-2 text-right text-slate-400 font-semibold">EMI</th>
+                      <th className="py-2 text-right text-slate-400 font-semibold">Total Interest</th>
+                      <th className="py-2 text-right text-slate-400 font-semibold">Total Pay</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[-2, -1, 0, 1, 2].map(delta => {
+                      const r = Math.max(0.1, annualRate + delta);
+                      const mr = r / 12 / 100;
+                      const e = calcEMI(principal, mr, tenureMonths);
+                      const totalInt = e * tenureMonths - principal;
+                      const isBase = delta === 0;
+                      return (
+                        <tr key={delta} className={`border-b border-white/5 ${isBase ? "bg-indigo-600/15" : ""}`}>
+                          <td className={`py-2.5 font-bold ${isBase ? "text-indigo-300" : delta < 0 ? "text-green-400" : "text-rose-400"}`}>
+                            {r.toFixed(1)}%
+                            {isBase && <span className="text-xs ml-1 opacity-60">(current)</span>}
+                          </td>
+                          <td className="py-2.5 text-right text-white">₹{fmt(e)}</td>
+                          <td className={`py-2.5 text-right ${delta < 0 ? "text-green-400" : delta > 0 ? "text-rose-400" : "text-slate-300"}`}>
+                            ₹{fmt(totalInt)}
+                          </td>
+                          <td className="py-2.5 text-right text-slate-300">₹{fmt(e * tenureMonths)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Tenure Sensitivity */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <h3 className="text-base font-bold mb-4 flex items-center gap-2">
+                <Calendar size={16} className="text-cyan-400" />
+                Tenure Sensitivity Analysis
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="py-2 text-left text-slate-400 font-semibold">Tenure</th>
+                      <th className="py-2 text-right text-slate-400 font-semibold">EMI</th>
+                      <th className="py-2 text-right text-slate-400 font-semibold">Total Interest</th>
+                      <th className="py-2 text-right text-slate-400 font-semibold">Closure</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[-5, -3, 0, 3, 5].map(delta => {
+                      const yr = Math.max(1, Math.min(30, tenureYears + delta));
+                      const mo = yr * 12;
+                      const e = calcEMI(principal, monthlyRate, mo);
+                      const totalInt = e * mo - principal;
+                      const isBase = delta === 0;
+
+                      // Closure month calculation
+                      let cm = startMonth + mo - 1;
+                      let cy = startYear + Math.floor(cm / 12);
+                      cm = ((cm - 1) % 12) + 1;
+
+                      return (
+                        <tr key={delta} className={`border-b border-white/5 ${isBase ? "bg-indigo-600/15" : ""}`}>
+                          <td className={`py-2.5 font-bold ${isBase ? "text-indigo-300" : delta < 0 ? "text-green-400" : "text-slate-300"}`}>
+                            {yr} yrs
+                            {isBase && <span className="text-xs ml-1 opacity-60">(current)</span>}
+                          </td>
+                          <td className={`py-2.5 text-right ${delta < 0 ? "text-rose-300" : delta > 0 ? "text-green-400" : "text-white"}`}>
+                            ₹{fmt(e)}
+                          </td>
+                          <td className={`py-2.5 text-right ${delta < 0 ? "text-green-400" : delta > 0 ? "text-rose-400" : "text-slate-300"}`}>
+                            ₹{fmt(totalInt)}
+                          </td>
+                          <td className="py-2.5 text-right text-slate-300 text-xs">
+                            {SHORT_MONTHS[cm - 1]} {cy}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Interest vs Principal trend */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <h3 className="text-base font-bold mb-4 flex items-center gap-2">
+                <BarChart2 size={16} className="text-indigo-400" />
+                Interest to Principal Shift (Yearly)
+              </h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={yearlyBarData} stackOffset="expand" layout="horizontal">
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                  <XAxis dataKey="year" tick={{ fill: "#64748b", fontSize: 10 }} />
+                  <YAxis tickFormatter={v => `${(v * 100).toFixed(0)}%`} tick={{ fill: "#64748b", fontSize: 10 }} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend wrapperStyle={{ color: "#94a3b8", fontSize: 12 }} />
+                  <Bar dataKey="Principal" stackId="a" fill={COLORS.principal} />
+                  <Bar dataKey="Interest" stackId="a" fill={COLORS.interest} />
+                </BarChart>
+              </ResponsiveContainer>
+              <p className="text-xs text-slate-500 mt-2">
+                Shows how the proportion of principal vs interest shifts over time — more principal is paid as the loan matures.
+              </p>
+            </div>
+
+            {/* Key Insights */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <h3 className="text-base font-bold mb-4 flex items-center gap-2">
+                <Info size={16} className="text-amber-400" />
+                Key Insights
+              </h3>
+              <div className="flex flex-col gap-3">
+                {[
+                  {
+                    icon: <DollarSign size={15} />,
+                    color: "text-indigo-400",
+                    bg: "bg-indigo-500/10",
+                    title: "Interest Ratio",
+                    desc: `You'll pay ₹${fmt(baseTotalInterest)} as interest — that's ${((baseTotalInterest / principal) * 100).toFixed(0)}% of your principal over ${tenureYears} years.`
+                  },
+                  {
+                    icon: <TrendingDown size={15} />,
+                    color: "text-green-400",
+                    bg: "bg-green-500/10",
+                    title: "Break-Even Point",
+                    desc: (() => {
+                      const halfwayRow = prepAmort.find(r => r.cumulativePrincipal >= principal / 2);
+                      return halfwayRow
+                        ? `50% of principal repaid by ${halfwayRow.monthName} ${halfwayRow.year} (EMI #${halfwayRow.period})`
+                        : "Calculate to see break-even";
+                    })()
+                  },
+                  {
+                    icon: <Target size={15} />,
+                    color: "text-amber-400",
+                    bg: "bg-amber-500/10",
+                    title: "Optimal Prepayment Window",
+                    desc: `Prepaying in the first ${Math.ceil(tenureYears / 3)} years saves the most interest as the interest component is highest early on.`
+                  },
+                  {
+                    icon: <AlertCircle size={15} />,
+                    color: "text-cyan-400",
+                    bg: "bg-cyan-500/10",
+                    title: "First Year Interest",
+                    desc: (() => {
+                      const yr1 = prepYearly[0];
+                      return yr1
+                        ? `In year 1, ₹${fmt(yr1.interest)} goes to interest vs ₹${fmt(yr1.principal)} to principal.`
+                        : "—";
+                    })()
+                  },
+                  {
+                    icon: <CheckCircle size={15} />,
+                    color: "text-rose-400",
+                    bg: "bg-rose-500/10",
+                    title: "Loan Closure",
+                    desc: prepClosure
+                      ? `Your loan will be fully paid by ${prepClosure.monthName} ${prepClosure.year} (EMI #${prepAmort.length}).${monthsSaved > 0 ? ` That's ${monthsSaved} months ahead of schedule!` : ""}`
+                      : "Set loan details to calculate"
+                  }
+                ].map((item, i) => (
+                  <div key={i} className={`flex items-start gap-3 ${item.bg} rounded-xl p-3.5`}>
+                    <div className={`${item.color} shrink-0 mt-0.5`}>{item.icon}</div>
+                    <div>
+                      <div className={`text-xs font-bold ${item.color} mb-0.5`}>{item.title}</div>
+                      <div className="text-xs text-slate-400 leading-relaxed">{item.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="mt-12 text-center text-xs text-slate-600">
+          <p>EMI SAVER • All calculations use standard reducing balance method • For informational purposes only</p>
+          <p className="mt-1">EMI Formula: E = P × r × (1+r)ⁿ / ((1+r)ⁿ - 1)</p>
+        </div>
+      </div>
+    </div>
+  );
